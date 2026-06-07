@@ -135,11 +135,42 @@ model Customer {
   city       String?
   state      String?
 
+  // Vendedor externo responsável pelo cadastro (atendimento presencial)
+  sellerId String?
+  seller   Seller? @relation(fields: [sellerId], references: [id])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   orders   Order[]
   sessions Session[]
+}
+
+// Vendedores externos — acessam o portal /vendedor para atender lojistas
+model Seller {
+  id               String   @id @default(cuid())
+  name             String
+  email            String   @unique
+  phone            String?
+  passwordHash     String
+  active           Boolean  @default(true)
+  commissionPercent Float   @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  customers Customer[]
+  sessions  SellerSession[]
+}
+
+model SellerSession {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  sellerId  String
+  seller    Seller   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([sellerId])
 }
 
 model Session {
@@ -158,6 +189,8 @@ model Order {
   number       String      @unique @default(cuid())
   customerId   String?
   customer     Customer?   @relation(fields: [customerId], references: [id])
+  sellerId     String?
+  sellerCommission Float?
   status       String      @default("DRAFT")
   subtotal     Float
   shippingCost Float       @default(0)

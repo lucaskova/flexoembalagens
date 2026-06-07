@@ -9,6 +9,8 @@ const LINKS = [
   { href: "/admin/categorias", label: "Categorias" },
   { href: "/admin/promocoes", label: "Promoções" },
   { href: "/admin/novidades", label: "Novidades" },
+  { href: "/admin/clientes", label: "Clientes" },
+  { href: "/admin/vendedores", label: "Vendedores" },
   { href: "/admin/configuracoes", label: "Configurações" },
 ];
 

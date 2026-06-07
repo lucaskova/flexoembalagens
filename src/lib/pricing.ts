@@ -29,21 +29,23 @@ export type PricingContext = {
   minOrder: number;
 };
 
-// Monta o contexto de precificação para a requisição atual,
-// considerando promoções ativas e o tipo do cliente logado (PF/PJ).
-export async function buildPricingContext(): Promise<PricingContext> {
-  const [promotions, b2b, customer] = await Promise.all([
-    getActivePromotions(),
-    getB2BSettings(),
-    getCurrentCustomer(),
-  ]);
-  const isB2B = b2b.enabled && customer?.type === "PJ";
+// Monta o contexto de precificação para um tipo de cliente explícito (PF/PJ).
+export async function buildPricingContextForType(type: string): Promise<PricingContext> {
+  const [promotions, b2b] = await Promise.all([getActivePromotions(), getB2BSettings()]);
+  const isB2B = b2b.enabled && type === "PJ";
   return {
     promotions,
     isB2B,
     b2bDiscountPercent: b2b.discountPercent,
     minOrder: b2b.minOrder,
   };
+}
+
+// Monta o contexto de precificação para a requisição atual,
+// considerando promoções ativas e o tipo do cliente logado (PF/PJ).
+export async function buildPricingContext(): Promise<PricingContext> {
+  const customer = await getCurrentCustomer();
+  return buildPricingContextForType(customer?.type ?? "PF");
 }
 
 // Preço final para um produto: aplica a melhor promoção e, para clientes
