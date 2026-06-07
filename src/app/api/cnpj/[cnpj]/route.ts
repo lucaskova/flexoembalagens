@@ -1,52 +1,98 @@
 import { NextResponse } from "next/server";
 
-type BrasilApiCnpj = {
-  razao_social?: string;
-  nome_fantasia?: string;
-  email?: string;
-  ddd_telefone_1?: string;
-  cep?: string;
-  logradouro?: string;
-  numero?: string;
-  complemento?: string;
-  bairro?: string;
-  municipio?: string;
-  uf?: string;
-  message?: string;
+type NormalizedCnpj = {
+  name: string;
+  tradeName: string;
+  email: string;
+  phone: string;
+  zipCode: string;
+  street: string;
+  number: string;
+  complement: string;
+  district: string;
+  city: string;
+  state: string;
 };
+
+const UA = "Mozilla/5.0 (compatible; FlexoEmbalagens/1.0; +https://flexoembalagens.vercel.app)";
+
+function digits(v: unknown): string {
+  return String(v ?? "").replace(/\D/g, "");
+}
+
+// BrasilAPI — https://brasilapi.com.br/api/cnpj/v1/{cnpj}
+async function fromBrasilApi(cnpj: string): Promise<NormalizedCnpj | null> {
+  try {
+    const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`, {
+      headers: { Accept: "application/json", "User-Agent": UA },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const d = await res.json();
+    if (!d || (!d.razao_social && !d.nome_fantasia)) return null;
+    const ddd = d.ddd_telefone_1 ?? "";
+    return {
+      name: d.razao_social ?? d.nome_fantasia ?? "",
+      tradeName: d.nome_fantasia ?? "",
+      email: d.email ?? "",
+      phone: ddd,
+      zipCode: digits(d.cep),
+      street: d.logradouro ?? "",
+      number: d.numero ?? "",
+      complement: d.complemento ?? "",
+      district: d.bairro ?? "",
+      city: d.municipio ?? "",
+      state: d.uf ?? "",
+    };
+  } catch {
+    return null;
+  }
+}
+
+// ReceitaWS — https://receitaws.com.br/v1/cnpj/{cnpj}
+async function fromReceitaWs(cnpj: string): Promise<NormalizedCnpj | null> {
+  try {
+    const res = await fetch(`https://receitaws.com.br/v1/cnpj/${cnpj}`, {
+      headers: { Accept: "application/json", "User-Agent": UA },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const d = await res.json();
+    if (!d || d.status === "ERROR" || (!d.nome && !d.fantasia)) return null;
+    return {
+      name: d.nome ?? d.fantasia ?? "",
+      tradeName: d.fantasia ?? "",
+      email: d.email ?? "",
+      phone: d.telefone ?? "",
+      zipCode: digits(d.cep),
+      street: d.logradouro ?? "",
+      number: d.numero ?? "",
+      complement: d.complemento ?? "",
+      district: d.bairro ?? "",
+      city: d.municipio ?? "",
+      state: d.uf ?? "",
+    };
+  } catch {
+    return null;
+  }
+}
 
 export async function GET(_req: Request, { params }: { params: Promise<{ cnpj: string }> }) {
   const { cnpj } = await params;
-  const clean = (cnpj ?? "").replace(/\D/g, "");
+  const clean = digits(cnpj);
   if (clean.length !== 14) {
     return NextResponse.json({ error: "CNPJ inválido" }, { status: 400 });
   }
 
-  try {
-    const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${clean}`, {
-      headers: { Accept: "application/json" },
-    });
+  // Tenta BrasilAPI; se falhar (bloqueio/limite em IPs de nuvem), tenta ReceitaWS.
+  const data = (await fromBrasilApi(clean)) ?? (await fromReceitaWs(clean));
 
-    if (!res.ok) {
-      return NextResponse.json({ error: "CNPJ não encontrado" }, { status: 404 });
-    }
-
-    const data = (await res.json()) as BrasilApiCnpj;
-
-    return NextResponse.json({
-      name: data.razao_social ?? data.nome_fantasia ?? "",
-      tradeName: data.nome_fantasia ?? "",
-      email: data.email ?? "",
-      phone: data.ddd_telefone_1 ?? "",
-      zipCode: (data.cep ?? "").replace(/\D/g, ""),
-      street: data.logradouro ?? "",
-      number: data.numero ?? "",
-      complement: data.complemento ?? "",
-      district: data.bairro ?? "",
-      city: data.municipio ?? "",
-      state: data.uf ?? "",
-    });
-  } catch {
-    return NextResponse.json({ error: "Falha ao consultar o CNPJ" }, { status: 502 });
+  if (!data) {
+    return NextResponse.json(
+      { error: "Não foi possível consultar o CNPJ agora. Preencha manualmente." },
+      { status: 502 },
+    );
   }
+
+  return NextResponse.json(data);
 }
