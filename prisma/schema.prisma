@@ -1,0 +1,234 @@
+// Lambari Pesca — schema single-store (sem multi-tenant)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Configurações gerais da loja (1 registro)
+model StoreSettings {
+  id          String   @id @default("default")
+  name        String   @default("Lambari Pesca")
+  description String?
+  logoUrl     String?
+  themeColor  String?
+  whatsapp    String?
+  email       String?
+  instagram   String?
+
+  // Barra de aviso no topo da loja
+  announcement        String?
+  announcementEnabled Boolean @default(false)
+
+  // Frete grátis acima de um valor
+  freeShippingEnabled   Boolean @default(false)
+  freeShippingThreshold Float?
+
+  // B2B — preço de atacado para clientes Pessoa Jurídica (CNPJ)
+  b2bEnabled              Boolean @default(false)
+  b2bDiscountPercent      Float?
+  b2bMinOrder             Float?
+  b2bMinFreight           Float?
+  b2bFreeShippingEnabled  Boolean @default(false)
+  b2bFreeShippingThreshold Float?
+
+  // Vitrine / hero da home
+  heroEnabled             Boolean @default(true)
+  heroTitle               String?
+  heroSubtitle            String?
+  heroCtaLabel            String?
+  featuredCarouselEnabled Boolean @default(true)
+  featuredTitle           String?
+
+  updatedAt DateTime @updatedAt
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?
+  active      Boolean   @default(true)
+  blingId     String?   @unique
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// Painel de promoções — desconto por produto, categoria ou loja inteira
+model Promotion {
+  id           String    @id @default(cuid())
+  title        String
+  description  String?
+  discountType String    @default("PERCENT") // PERCENT | FIXED
+  discountValue Float
+  scope        String    @default("PRODUCT") // PRODUCT | CATEGORY | STORE
+  productId    String?
+  categoryId   String?
+  active       Boolean   @default(true)
+  startsAt     DateTime?
+  endsAt       DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([active])
+}
+
+// Painel de novidades — anúncios/posts exibidos na loja
+model News {
+  id          String    @id @default(cuid())
+  title       String
+  slug        String    @unique
+  excerpt     String?
+  content     String?
+  imageUrl    String?
+  published   Boolean   @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([published, publishedAt])
+}
+
+model Product {
+  id          String        @id @default(cuid())
+  name        String
+  slug        String        @unique
+  description String?
+  sku         String        @unique
+  price       Float
+  stock       Int           @default(0)
+  status      String        @default("ACTIVE")
+  featured    Boolean       @default(false)
+  imageUrl    String?
+  blingId     String?       @unique
+  categoryId  String?
+  category    Category?     @relation(fields: [categoryId], references: [id])
+  syncedAt    DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  orderItems OrderItem[]
+
+  @@index([status, featured])
+}
+
+model Customer {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  phone        String?
+  document     String?
+  passwordHash String?
+  type         String   @default("PF") // PF = Pessoa Física (varejo) | PJ = Pessoa Jurídica (atacado)
+
+  // Endereço padrão (pré-preenche o checkout)
+  zipCode    String?
+  street     String?
+  number     String?
+  complement String?
+  district   String?
+  city       String?
+  state      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders   Order[]
+  sessions Session[]
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  token      String   @unique
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([customerId])
+}
+
+model Order {
+  id           String      @id @default(cuid())
+  number       String      @unique @default(cuid())
+  customerId   String?
+  customer     Customer?   @relation(fields: [customerId], references: [id])
+  status       String      @default("DRAFT")
+  subtotal     Float
+  shippingCost Float       @default(0)
+  total        Float
+  blingId      String?
+  notes        String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  items     OrderItem[]
+  shipment  Shipment?
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id])
+  name      String
+  sku       String
+  quantity  Int
+  unitPrice Float
+
+  @@index([orderId])
+}
+
+model Shipment {
+  id           String   @id @default(cuid())
+  orderId      String   @unique
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  carrier      String   @default("JT_EXPRESS")
+  trackingCode String?
+  labelUrl     String?
+  cost         Float?
+  zipCode      String?
+  street       String?
+  number       String?
+  complement   String?
+  district     String?
+  city         String?
+  state        String?
+  shippedAt    DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Integration {
+  id             String              @id @default(cuid())
+  provider       String              @unique
+  status         String              @default("DISCONNECTED")
+  accessToken    String?
+  refreshToken   String?
+  tokenExpiresAt DateTime?
+  config         String?
+  lastSyncAt     DateTime?
+  lastError      String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  logs IntegrationLog[]
+}
+
+model IntegrationLog {
+  id            String   @id @default(cuid())
+  integrationId String
+  integration   Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  level         String   @default("info")
+  action        String
+  message       String
+  createdAt     DateTime @default(now())
+
+  @@index([integrationId, createdAt])
+}

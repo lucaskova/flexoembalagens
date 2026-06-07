@@ -1,0 +1,27 @@
+{
+  "name": "Lambari Pesca",
+  "short_name": "Lambari",
+  "description": "Loja de artigos de pesca — compre online com estoque atualizado.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#047857",
+  "lang": "pt-BR",
+  "categories": ["shopping"],
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
