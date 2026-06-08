@@ -32,6 +32,7 @@ export default async function VendedorRelatorioPage({
     items: number;
     total: number;
     commission: number;
+    paymentMethod: string | null;
   }> = [];
 
   try {
@@ -64,6 +65,7 @@ export default async function VendedorRelatorioPage({
       total: o.total,
       commission:
         o.sellerCommission ?? Number(((o.subtotal * commissionPercent) / 100).toFixed(2)),
+      paymentMethod: o.paymentMethod,
     }));
   } catch {
     // banco offline
@@ -121,6 +123,7 @@ export default async function VendedorRelatorioPage({
                   <th className="py-2 pr-3 font-medium">Data</th>
                   <th className="py-2 pr-3 font-medium">Pedido</th>
                   <th className="py-2 pr-3 font-medium">Cliente</th>
+                  <th className="py-2 pr-3 font-medium">Pagamento</th>
                   <th className="py-2 pr-3 font-medium">Itens</th>
                   <th className="py-2 pr-3 text-right font-medium">Total</th>
                   <th className="py-2 pr-3 text-right font-medium">Comissão</th>
@@ -136,6 +139,7 @@ export default async function VendedorRelatorioPage({
                       #{o.number.slice(-6)}
                     </td>
                     <td className="py-2 pr-3 font-medium text-slate-800">{o.customer}</td>
+                    <td className="py-2 pr-3 text-slate-600">{o.paymentMethod ?? "—"}</td>
                     <td className="py-2 pr-3 text-slate-600">{o.items}</td>
                     <td className="py-2 pr-3 text-right font-medium">{formatBRL(o.total)}</td>
                     <td className="py-2 pr-3 text-right font-semibold text-emerald-700">
@@ -146,7 +150,7 @@ export default async function VendedorRelatorioPage({
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-slate-200 font-bold">
-                  <td className="py-2 pr-3" colSpan={4}>
+                  <td className="py-2 pr-3" colSpan={5}>
                     Total
                   </td>
                   <td className="py-2 pr-3 text-right">{formatBRL(totalSold)}</td>

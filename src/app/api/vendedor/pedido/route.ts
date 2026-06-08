@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
         ...order,
         subtotal,
         paymentMethod: paymentMethod || null,
-        customer: { name: customer.name, document: customer.document },
+        customer: { name: customer.name, document: customer.document, phone: customer.phone },
         seller: { name: seller.name },
         items: pricedItems.map((i) => ({
           name: i.name,
