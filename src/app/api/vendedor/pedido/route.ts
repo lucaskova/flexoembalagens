@@ -11,6 +11,7 @@ const schema = z.object({
     .array(z.object({ id: z.string(), quantity: z.number().int().positive() }))
     .min(1, "Adicione ao menos um produto."),
   notes: z.string().optional(),
+  paymentMethod: z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Dados inválidos." }, { status: 400 });
   }
 
-  const { customerId, items, notes } = parsed.data;
+  const { customerId, items, notes, paymentMethod } = parsed.data;
 
   const customer = await prisma.customer.findUnique({ where: { id: customerId } });
   if (!customer) {
@@ -86,6 +87,7 @@ export async function POST(req: NextRequest) {
         customerId: customer.id,
         sellerId: seller.id,
         sellerCommission,
+        paymentMethod: paymentMethod || null,
         status: "PENDING",
         subtotal,
         shippingCost: 0,
@@ -116,10 +118,25 @@ export async function POST(req: NextRequest) {
             }
           : undefined,
       },
-      select: { id: true, number: true, total: true },
+      select: { id: true, number: true, total: true, createdAt: true },
     });
 
-    return NextResponse.json({ ok: true, order });
+    return NextResponse.json({
+      ok: true,
+      order: {
+        ...order,
+        subtotal,
+        paymentMethod: paymentMethod || null,
+        customer: { name: customer.name, document: customer.document },
+        seller: { name: seller.name },
+        items: pricedItems.map((i) => ({
+          name: i.name,
+          sku: i.sku,
+          quantity: i.quantity,
+          unitPrice: i.unitPrice,
+        })),
+      },
+    });
   } catch {
     return NextResponse.json({ error: "Não foi possível criar o pedido." }, { status: 500 });
   }

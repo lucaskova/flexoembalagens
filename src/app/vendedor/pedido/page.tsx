@@ -11,6 +11,7 @@ export default async function VendedorPedidoPage() {
   if (!seller) return null;
 
   let clients: Array<{ id: string; name: string; type: string; document: string | null }> = [];
+  let paymentMethods: Array<{ id: string; name: string }> = [];
   let products: Array<{
     id: string;
     name: string;
@@ -23,7 +24,7 @@ export default async function VendedorPedidoPage() {
 
   try {
     const pricing = await buildPricingContextForType("PJ");
-    const [dbClients, dbProducts] = await Promise.all([
+    const [dbClients, dbProducts, dbMethods] = await Promise.all([
       prisma.customer.findMany({
         where: { sellerId: seller.id },
         orderBy: { name: "asc" },
@@ -34,9 +35,15 @@ export default async function VendedorPedidoPage() {
         orderBy: { name: "asc" },
         select: { id: true, name: true, sku: true, imageUrl: true, stock: true, price: true, categoryId: true },
       }),
+      prisma.paymentMethod.findMany({
+        where: { active: true },
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+        select: { id: true, name: true },
+      }),
     ]);
 
     clients = dbClients;
+    paymentMethods = dbMethods;
     products = dbProducts.map((p) => {
       const priced = priceFor(
         { id: p.id, price: Number(p.price), categoryId: p.categoryId },
@@ -72,7 +79,12 @@ export default async function VendedorPedidoPage() {
           para montar pedidos.
         </div>
       ) : (
-        <SellerOrderBuilder clients={clients} products={products} />
+        <SellerOrderBuilder
+          clients={clients}
+          products={products}
+          paymentMethods={paymentMethods}
+          sellerName={seller.name}
+        />
       )}
     </div>
   );
