@@ -34,6 +34,9 @@ export default async function SellerLayout({ children }: { children: React.React
               <Link href="/vendedor/pedido" className="hover:text-[#0f4c81]">
                 Novo pedido
               </Link>
+              <Link href="/vendedor/pedidos" className="hover:text-[#0f4c81]">
+                Meus pedidos
+              </Link>
               <Link href="/vendedor/relatorio" className="hover:text-[#0f4c81]">
                 Relatório
               </Link>

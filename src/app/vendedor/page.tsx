@@ -49,12 +49,20 @@ export default async function SellerDashboard() {
         </Link>
       </section>
 
-      <Link
-        href="/vendedor/relatorio"
-        className="block rounded-2xl border border-slate-200 bg-white p-5 text-sm font-medium text-[#0f4c81] shadow-sm transition hover:shadow"
-      >
-        Ver relatório de vendas e comissões →
-      </Link>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Link
+          href="/vendedor/pedidos"
+          className="block rounded-2xl border border-slate-200 bg-white p-5 text-sm font-medium text-[#0f4c81] shadow-sm transition hover:shadow"
+        >
+          Ver meus pedidos →
+        </Link>
+        <Link
+          href="/vendedor/relatorio"
+          className="block rounded-2xl border border-slate-200 bg-white p-5 text-sm font-medium text-[#0f4c81] shadow-sm transition hover:shadow"
+        >
+          Ver relatório de vendas e comissões →
+        </Link>
+      </div>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="mb-3 font-semibold">Meus clientes ({clientCount})</h2>
