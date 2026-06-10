@@ -140,10 +140,12 @@ export default async function AdminPage({
           Status: <span className="font-medium">{jt?.status ?? "DISCONNECTED"}</span>
         </p>
         <p className="mt-3 text-sm text-slate-500">
-          Configure <code className="rounded bg-slate-100 px-1">JT_CUSTOMER_CODE</code>,{" "}
-          <code className="rounded bg-slate-100 px-1">JT_API_ACCOUNT</code> e{" "}
-          <code className="rounded bg-slate-100 px-1">JT_PRIVATE_KEY</code> no{" "}
-          <code className="rounded bg-slate-100 px-1">.env.local</code>.
+          Cotação: <code className="rounded bg-slate-100 px-1">JT_CUSTOMER_CODE</code>,{" "}
+          <code className="rounded bg-slate-100 px-1">JT_API_ACCOUNT</code>,{" "}
+          <code className="rounded bg-slate-100 px-1">JT_PRIVATE_KEY</code>,{" "}
+          <code className="rounded bg-slate-100 px-1">JT_ORIGIN_ZIP_CODE</code>.
+          Envio: dados do remetente <code className="rounded bg-slate-100 px-1">JT_SENDER_*</code> + NF-e no Bling.
+          Use <code className="rounded bg-slate-100 px-1">JT_API_ENV=demo</code> para homologação.
         </p>
       </section>
     </div>

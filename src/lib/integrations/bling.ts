@@ -86,3 +86,100 @@ export type BlingProduct = {
   midia?: { imagens?: { externas?: Array<{ link: string }> } };
   categoria?: { id: number; descricao: string };
 };
+
+export type BlingNfeSummary = {
+  id: number;
+  numero?: string;
+  serie?: string;
+  chaveAcesso?: string;
+  dataEmissao?: string;
+  valorNota?: number;
+  numeroPedidoLoja?: string;
+};
+
+export type BlingNfeDetails = BlingNfeSummary & {
+  contato?: {
+    nome?: string;
+    numeroDocumento?: string;
+    email?: string;
+    telefone?: string;
+    endereco?: {
+      cep?: string;
+      logradouro?: string;
+      numero?: string;
+      complemento?: string;
+      bairro?: string;
+      municipio?: string;
+      uf?: string;
+    };
+  };
+  itens?: Array<{
+    descricao?: string;
+    quantidade?: number;
+    valor?: number;
+    codigo?: string;
+    classificacaoFiscal?: string;
+  }>;
+};
+
+export async function getBlingAccessToken(): Promise<string | null> {
+  const { prisma } = await import("@/lib/prisma");
+  const integration = await prisma.integration.findUnique({ where: { provider: "BLING" } });
+  return integration?.accessToken ?? null;
+}
+
+export async function fetchBlingSalesOrder(accessToken: string, orderId: string | number) {
+  return blingFetch<{ data: Record<string, unknown> }>(accessToken, `/pedidos/vendas/${orderId}`);
+}
+
+export async function fetchBlingNfe(accessToken: string, nfeId: string | number) {
+  return blingFetch<{ data: BlingNfeDetails }>(accessToken, `/nfe/${nfeId}`);
+}
+
+export async function listBlingNfe(accessToken: string, params: Record<string, string>) {
+  const qs = new URLSearchParams(params).toString();
+  return blingFetch<{ data: BlingNfeSummary[] }>(accessToken, `/nfe?${qs}`);
+}
+
+/** Busca NF-e do Bling vinculada ao pedido da loja (por blingId ou número do pedido). */
+export async function findBlingNfeForStoreOrder(
+  accessToken: string,
+  opts: { blingOrderId?: string | null; storeOrderNumber: string; since?: Date },
+): Promise<BlingNfeDetails | null> {
+  if (opts.blingOrderId) {
+    try {
+      const pedido = await fetchBlingSalesOrder(accessToken, opts.blingOrderId);
+      const nota = pedido.data?.notaFiscal as { id?: number } | undefined;
+      if (nota?.id) {
+        const nfe = await fetchBlingNfe(accessToken, nota.id);
+        return nfe.data;
+      }
+    } catch {
+      // segue para busca por número do pedido na loja
+    }
+  }
+
+  const since = opts.since ?? new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+  const dataInicial = since.toISOString().slice(0, 10);
+
+  for (let page = 1; page <= 5; page++) {
+    const { data } = await listBlingNfe(accessToken, {
+      pagina: String(page),
+      limite: "100",
+      dataEmissaoInicial: dataInicial,
+    });
+
+    const match = data.find(
+      (n) =>
+        n.numeroPedidoLoja === opts.storeOrderNumber ||
+        n.numeroPedidoLoja === opts.storeOrderNumber.slice(-6),
+    );
+    if (match?.id) {
+      const nfe = await fetchBlingNfe(accessToken, match.id);
+      return nfe.data;
+    }
+    if (data.length < 100) break;
+  }
+
+  return null;
+}

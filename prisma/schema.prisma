@@ -105,6 +105,13 @@ model Product {
   status      String        @default("ACTIVE")
   featured    Boolean       @default(false)
   imageUrl    String?
+
+  // Dimensões/peso para cotação de frete (J&T)
+  weightGrams Int?
+  widthCm     Float?
+  heightCm    Float?
+  lengthCm    Float?
+
   blingId     String?       @unique
   categoryId  String?
   category    Category?     @relation(fields: [categoryId], references: [id])

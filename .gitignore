@@ -27,6 +27,12 @@
 # uploads de imagens enviadas pelo admin (runtime — não persiste no Vercel)
 /public/uploads
 
+# etiquetas J&T geradas em runtime
+/public/shipping-labels
+
+# documentação interna da J&T (não versionar)
+/docs
+
 # banco SQLite local (produção usa Postgres)
 *.db
 *.db-journal

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { formatBRL } from "@/lib/format";
+import ShipJtButton from "@/components/admin/ShipJtButton";
 
 export const metadata = { title: "Pedidos — Painel" };
 
@@ -23,6 +24,8 @@ export default async function AdminPedidosPage() {
     items: number;
     total: number;
     commission: number | null;
+    trackingCode: string | null;
+    labelUrl: string | null;
   }> = [];
   let totalRevenue = 0;
   let totalCommission = 0;
@@ -34,6 +37,7 @@ export default async function AdminPedidosPage() {
         take: 200,
         include: {
           customer: { select: { name: true } },
+          shipment: { select: { trackingCode: true, labelUrl: true } },
           _count: { select: { items: true } },
         },
       }),
@@ -53,6 +57,8 @@ export default async function AdminPedidosPage() {
       items: o._count.items,
       total: o.total,
       commission: o.sellerCommission,
+      trackingCode: o.shipment?.trackingCode ?? null,
+      labelUrl: o.shipment?.labelUrl ?? null,
     }));
 
     totalRevenue = orders.reduce((s, o) => s + o.total, 0);
@@ -101,6 +107,7 @@ export default async function AdminPedidosPage() {
                   <th className="py-2 pr-3 font-medium">Itens</th>
                   <th className="py-2 pr-3 text-right font-medium">Total</th>
                   <th className="py-2 pr-3 text-right font-medium">Comissão</th>
+                  <th className="py-2 pr-3 font-medium">Envio</th>
                 </tr>
               </thead>
               <tbody>
@@ -131,6 +138,29 @@ export default async function AdminPedidosPage() {
                       <td className="py-2 pr-3 text-right font-medium">{formatBRL(o.total)}</td>
                       <td className="py-2 pr-3 text-right text-emerald-700">
                         {o.commission ? formatBRL(o.commission) : "—"}
+                      </td>
+                      <td className="py-2 pr-3">
+                        {o.trackingCode ? (
+                          <div className="space-y-1">
+                            <p className="font-mono text-xs text-slate-600">{o.trackingCode}</p>
+                            {o.labelUrl && (
+                              <a
+                                href={o.labelUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-sky-700 hover:underline"
+                              >
+                                Etiqueta PDF
+                              </a>
+                            )}
+                          </div>
+                        ) : (
+                          <ShipJtButton
+                            orderId={o.id}
+                            hasTracking={!!o.trackingCode}
+                            status={o.status}
+                          />
+                        )}
                       </td>
                     </tr>
                   );

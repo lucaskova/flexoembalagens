@@ -13,6 +13,10 @@ type ProductValues = {
   featured?: boolean;
   status?: string;
   categoryId?: string | null;
+  weightGrams?: number | null;
+  widthCm?: number | null;
+  heightCm?: number | null;
+  lengthCm?: number | null;
 };
 
 type Props = {
@@ -77,6 +81,65 @@ export default function ProductForm({ action, categories, product, submitLabel }
         </label>
 
         <ImageUploadField name="imageUrl" defaultValue={p.imageUrl} />
+
+        <fieldset className="sm:col-span-2 rounded-xl border border-slate-200 p-4">
+          <legend className="px-1 text-sm font-semibold text-slate-700">
+            Frete (peso e dimensões)
+          </legend>
+          <p className="mb-3 text-xs text-slate-500">
+            Usado para calcular o frete J&T. Deixe em branco se não souber.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-4">
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">Peso (g)</span>
+              <input
+                name="weightGrams"
+                type="number"
+                min={0}
+                step={1}
+                defaultValue={p.weightGrams ?? ""}
+                placeholder="500"
+                className="input"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">Largura (cm)</span>
+              <input
+                name="widthCm"
+                type="number"
+                min={0}
+                step="0.1"
+                defaultValue={p.widthCm ?? ""}
+                placeholder="15"
+                className="input"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">Altura (cm)</span>
+              <input
+                name="heightCm"
+                type="number"
+                min={0}
+                step="0.1"
+                defaultValue={p.heightCm ?? ""}
+                placeholder="10"
+                className="input"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">Comprimento (cm)</span>
+              <input
+                name="lengthCm"
+                type="number"
+                min={0}
+                step="0.1"
+                defaultValue={p.lengthCm ?? ""}
+                placeholder="20"
+                className="input"
+              />
+            </label>
+          </div>
+        </fieldset>
 
         <label className="block sm:col-span-2">
           <span className="mb-1 block text-sm font-medium text-slate-700">Descrição</span>

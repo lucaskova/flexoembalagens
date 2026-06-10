@@ -15,6 +15,20 @@ function str(raw: FormDataEntryValue | null): string {
   return String(raw ?? "").trim();
 }
 
+function intOrNull(raw: FormDataEntryValue | null): number | null {
+  const v = str(raw);
+  if (!v) return null;
+  const n = Math.trunc(Number(v.replace(",", ".")));
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+function floatOrNull(raw: FormDataEntryValue | null): number | null {
+  const v = str(raw);
+  if (!v) return null;
+  const n = Number(v.replace(",", "."));
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
 export async function createProduct(formData: FormData) {
   const name = str(formData.get("name"));
   if (!name) redirect("/admin/produtos/novo?err=Nome+obrigat%C3%B3rio");
@@ -36,6 +50,10 @@ export async function createProduct(formData: FormData) {
         featured: formData.get("featured") === "on",
         status: stock > 0 ? str(formData.get("status")) || "ACTIVE" : "OUT_OF_STOCK",
         categoryId: categoryId || null,
+        weightGrams: intOrNull(formData.get("weightGrams")),
+        widthCm: floatOrNull(formData.get("widthCm")),
+        heightCm: floatOrNull(formData.get("heightCm")),
+        lengthCm: floatOrNull(formData.get("lengthCm")),
       },
     });
   } catch (e) {
@@ -70,6 +88,10 @@ export async function updateProduct(id: string, formData: FormData) {
         featured: formData.get("featured") === "on",
         status: stock > 0 ? statusRaw : "OUT_OF_STOCK",
         categoryId: categoryId || null,
+        weightGrams: intOrNull(formData.get("weightGrams")),
+        widthCm: floatOrNull(formData.get("widthCm")),
+        heightCm: floatOrNull(formData.get("heightCm")),
+        lengthCm: floatOrNull(formData.get("lengthCm")),
       },
     });
   } catch (e) {

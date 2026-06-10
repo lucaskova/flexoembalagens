@@ -53,6 +53,10 @@ export default async function EditarProdutoPage({
             featured: product.featured,
             status: product.status,
             categoryId: product.categoryId,
+            weightGrams: product.weightGrams,
+            widthCm: product.widthCm,
+            heightCm: product.heightCm,
+            lengthCm: product.lengthCm,
           }}
         />
       </div>
