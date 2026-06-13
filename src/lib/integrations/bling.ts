@@ -12,6 +12,25 @@ const BLING_API = process.env.BLING_API_URL ?? "https://api.bling.com.br/Api/v3"
 const BLING_AUTH = "https://www.bling.com.br/Api/v3/oauth/authorize";
 const BLING_TOKEN = "https://www.bling.com.br/Api/v3/oauth/token";
 
+/** Bling limita a 3 req/s — mantemos ~400ms entre chamadas. */
+const BLING_MIN_INTERVAL_MS = 400;
+let lastBlingRequestAt = 0;
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function throttleBling() {
+  const now = Date.now();
+  const wait = lastBlingRequestAt + BLING_MIN_INTERVAL_MS - now;
+  if (wait > 0) await sleep(wait);
+  lastBlingRequestAt = Date.now();
+}
+
+function isRateLimitError(status: number, body: string) {
+  return status === 429 || body.includes("TOO_MANY_REQUESTS");
+}
+
 export function getBlingAuthUrl(state: string): string {
   const clientId = process.env.BLING_CLIENT_ID;
   if (!clientId) throw new Error("BLING_CLIENT_ID não configurado.");
@@ -55,17 +74,39 @@ export async function exchangeBlingCode(code: string) {
 }
 
 export async function blingFetch<T>(accessToken: string, path: string): Promise<T> {
-  const res = await fetch(`${BLING_API}${path}`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      Accept: "application/json",
-    },
-  });
-  if (!res.ok) {
+  const maxAttempts = 4;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    await throttleBling();
+
+    const res = await fetch(`${BLING_API}${path}`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/json",
+      },
+    });
+
+    if (res.ok) {
+      return res.json() as Promise<T>;
+    }
+
     const err = await res.text();
+
+    if (isRateLimitError(res.status, err) && attempt < maxAttempts) {
+      await sleep(1000 * attempt);
+      continue;
+    }
+
+    if (isRateLimitError(res.status, err)) {
+      throw new Error(
+        "Limite de requisições do Bling atingido. Aguarde alguns segundos e tente novamente.",
+      );
+    }
+
     throw new Error(`Bling API ${path}: ${err}`);
   }
-  return res.json() as Promise<T>;
+
+  throw new Error("Limite de requisições do Bling atingido. Tente novamente em instantes.");
 }
 
 /** Lista produtos do Bling (paginado). */
