@@ -76,6 +76,20 @@ export async function fetchBlingProducts(accessToken: string, page = 1) {
   );
 }
 
+export type BlingCategory = {
+  id: number;
+  descricao: string;
+  categoriaPai?: { id: number };
+};
+
+/** Lista categorias de produtos do Bling (paginado). */
+export async function fetchBlingCategories(accessToken: string, page = 1) {
+  return blingFetch<{ data: BlingCategory[] }>(
+    accessToken,
+    `/categorias/produtos?pagina=${page}&limite=100`,
+  );
+}
+
 export type BlingProduct = {
   id: number;
   nome: string;

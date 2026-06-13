@@ -1,5 +1,9 @@
 import { prisma } from "@/lib/prisma";
-import { fetchBlingProducts, type BlingProduct } from "@/lib/integrations/bling";
+import {
+  fetchBlingProducts,
+  fetchBlingCategories,
+  type BlingProduct,
+} from "@/lib/integrations/bling";
 
 function slugify(text: string): string {
   return text
@@ -10,18 +14,71 @@ function slugify(text: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
-async function upsertCategory(blingCat?: { id: number; descricao: string }) {
-  if (!blingCat) return null;
-  const slug = slugify(blingCat.descricao);
+/** Cria/atualiza uma categoria a partir dos dados do Bling, evitando colisão de slug. */
+async function upsertCategoryRecord(blingId: number, descricao: string) {
+  const name = descricao.trim() || `Categoria ${blingId}`;
+  const baseSlug = slugify(name) || `categoria-${blingId}`;
+
+  const conflict = await prisma.category.findUnique({ where: { slug: baseSlug } });
+  const slug =
+    conflict && conflict.blingId !== String(blingId) ? `${baseSlug}-${blingId}` : baseSlug;
+
   return prisma.category.upsert({
-    where: { blingId: String(blingCat.id) },
-    update: { name: blingCat.descricao, slug },
-    create: {
-      name: blingCat.descricao,
-      slug,
-      blingId: String(blingCat.id),
-    },
+    where: { blingId: String(blingId) },
+    update: { name, slug },
+    create: { name, slug, blingId: String(blingId) },
   });
+}
+
+/**
+ * Sincroniza TODAS as categorias de produtos do Bling.
+ * Retorna um mapa blingCategoriaId -> categoriaId local.
+ */
+export async function syncBlingCategories(accessToken: string): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  let page = 1;
+
+  for (;;) {
+    const { data } = await fetchBlingCategories(accessToken, page);
+    if (!data?.length) break;
+
+    for (const c of data) {
+      if (!c?.id || !c.descricao) continue;
+      const rec = await upsertCategoryRecord(c.id, c.descricao);
+      map.set(String(c.id), rec.id);
+    }
+
+    if (data.length < 100) break;
+    page += 1;
+    if (page > 50) break;
+  }
+
+  return map;
+}
+
+/** Resolve o categoryId local de um produto do Bling. */
+async function resolveCategoryId(
+  p: BlingProduct,
+  catMap?: Map<string, string>,
+): Promise<string | null> {
+  const blingCatId = p.categoria?.id;
+  if (!blingCatId) return null;
+
+  const fromMap = catMap?.get(String(blingCatId));
+  if (fromMap) return fromMap;
+
+  const existing = await prisma.category.findUnique({
+    where: { blingId: String(blingCatId) },
+    select: { id: true },
+  });
+  if (existing) return existing.id;
+
+  if (p.categoria?.descricao) {
+    const rec = await upsertCategoryRecord(blingCatId, p.categoria.descricao);
+    return rec.id;
+  }
+
+  return null;
 }
 
 async function upsertProduct(p: BlingProduct, categoryId: string | null) {
@@ -61,6 +118,7 @@ async function upsertProduct(p: BlingProduct, categoryId: string | null) {
 
 /** Sincroniza produtos e categorias do Bling para o banco local. */
 export async function syncProductsFromBling(accessToken: string): Promise<number> {
+  const catMap = await syncBlingCategories(accessToken);
   let page = 1;
   let total = 0;
 
@@ -69,8 +127,8 @@ export async function syncProductsFromBling(accessToken: string): Promise<number
     if (!data?.length) break;
 
     for (const item of data) {
-      const cat = await upsertCategory(item.categoria);
-      await upsertProduct(item, cat?.id ?? null);
+      const categoryId = await resolveCategoryId(item, catMap);
+      await upsertProduct(item, categoryId);
       total += 1;
     }
 
@@ -137,6 +195,7 @@ export async function importBlingProductsByIds(
   if (blingIds.length === 0) return 0;
 
   const wanted = new Set(blingIds.map(String));
+  const catMap = await syncBlingCategories(accessToken);
   let page = 1;
   let imported = 0;
 
@@ -146,8 +205,8 @@ export async function importBlingProductsByIds(
 
     for (const item of data) {
       if (!wanted.has(String(item.id))) continue;
-      const cat = await upsertCategory(item.categoria);
-      await upsertProduct(item, cat?.id ?? null);
+      const categoryId = await resolveCategoryId(item, catMap);
+      await upsertProduct(item, categoryId);
       imported += 1;
     }
 
