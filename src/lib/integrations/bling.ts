@@ -135,7 +135,10 @@ export type BlingStore = {
 
 /** Lista as lojas/canais de venda cadastrados no Bling. */
 export async function fetchBlingStores(accessToken: string): Promise<BlingStore[]> {
-  const res = await blingFetch<{ data: BlingStore[] }>(accessToken, `/lojas?pagina=1&limite=100`);
+  const res = await blingFetch<{ data: BlingStore[] }>(
+    accessToken,
+    `/canais-venda?pagina=1&limite=100`,
+  );
   return res.data ?? [];
 }
 
