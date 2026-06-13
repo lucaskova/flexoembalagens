@@ -125,6 +125,20 @@ export async function fetchBlingProducts(accessToken: string, page = 1) {
   return blingFetch<{ data: BlingProduct[] }>(accessToken, `/produtos?${params.toString()}`);
 }
 
+export type BlingStore = {
+  id: number;
+  nome?: string;
+  descricao?: string;
+  situacao?: string | number;
+  tipo?: string;
+};
+
+/** Lista as lojas/canais de venda cadastrados no Bling. */
+export async function fetchBlingStores(accessToken: string): Promise<BlingStore[]> {
+  const res = await blingFetch<{ data: BlingStore[] }>(accessToken, `/lojas?pagina=1&limite=100`);
+  return res.data ?? [];
+}
+
 export type BlingCategory = {
   id: number;
   descricao: string;
