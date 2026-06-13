@@ -11,6 +11,7 @@
 const BLING_API = process.env.BLING_API_URL ?? "https://api.bling.com.br/Api/v3";
 const BLING_AUTH = "https://www.bling.com.br/Api/v3/oauth/authorize";
 const BLING_TOKEN = "https://www.bling.com.br/Api/v3/oauth/token";
+const BLING_STORE_ID = process.env.BLING_STORE_ID?.trim();
 
 /** Bling limita a 3 req/s — mantemos ~400ms entre chamadas. */
 const BLING_MIN_INTERVAL_MS = 400;
@@ -111,10 +112,17 @@ export async function blingFetch<T>(accessToken: string, path: string): Promise<
 
 /** Lista produtos do Bling (paginado). */
 export async function fetchBlingProducts(accessToken: string, page = 1) {
-  return blingFetch<{ data: BlingProduct[] }>(
-    accessToken,
-    `/produtos?pagina=${page}&limite=100&criterio=2`,
-  );
+  const params = new URLSearchParams({
+    pagina: String(page),
+    limite: "100",
+    criterio: "2",
+  });
+
+  if (BLING_STORE_ID) {
+    params.set("idLoja", BLING_STORE_ID);
+  }
+
+  return blingFetch<{ data: BlingProduct[] }>(accessToken, `/produtos?${params.toString()}`);
 }
 
 export type BlingCategory = {
