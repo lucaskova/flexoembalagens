@@ -6,9 +6,9 @@ import { deleteProduct } from "./actions";
 export default async function AdminProdutosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ ok?: string; q?: string }>;
+  searchParams: Promise<{ ok?: string; q?: string; count?: string }>;
 }) {
-  const { ok, q } = await searchParams;
+  const { ok, q, count } = await searchParams;
   const query = q?.trim() ?? "";
 
   let products: Awaited<
@@ -38,17 +38,31 @@ export default async function AdminProdutosPage({
           <h1 className="text-2xl font-bold">Produtos</h1>
           <p className="text-sm text-slate-600">{products.length} itens no catálogo</p>
         </div>
-        <Link
-          href="/admin/produtos/novo"
-          className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
-        >
-          + Cadastrar produto
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/admin/produtos/importar"
+            className="rounded-xl border border-emerald-700 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
+          >
+            Importar do Bling
+          </Link>
+          <Link
+            href="/admin/produtos/novo"
+            className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
+          >
+            + Cadastrar produto
+          </Link>
+        </div>
       </header>
 
       {ok && (
         <p className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">
-          {ok === "created" ? "Produto criado." : ok === "updated" ? "Produto atualizado." : "Pronto."}
+          {ok === "created"
+            ? "Produto criado."
+            : ok === "updated"
+              ? "Produto atualizado."
+              : ok === "imported"
+                ? `${count ?? 0} produto(s) importado(s) do Bling.`
+                : "Pronto."}
         </p>
       )}
 
